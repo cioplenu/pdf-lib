@@ -1,0 +1,22 @@
+{
+  "name": "@operations1/pdf-lib-linux-x64-gnu",
+  "version": "0.0.0",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "pdf-lib.linux-x64-gnu.node",
+  "files": [
+    "pdf-lib.linux-x64-gnu.node"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">= 10"
+  },
+  "repository": "https://github.com/cioplenu/pdf-lib.git",
+  "libc": [
+    "glibc"
+  ]
+}

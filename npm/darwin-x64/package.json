@@ -1,0 +1,19 @@
+{
+  "name": "@operations1/pdf-lib-darwin-x64",
+  "version": "0.0.0",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "pdf-lib.darwin-x64.node",
+  "files": [
+    "pdf-lib.darwin-x64.node"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">= 10"
+  },
+  "repository": "https://github.com/cioplenu/pdf-lib.git"
+}
