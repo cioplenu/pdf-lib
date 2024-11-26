@@ -43,15 +43,18 @@ static SAME_LINE_RANGE_DIFF: f32 = 5.0;
 #[napi]
 /// Extract text from pdf files in lines and images with related text
 pub fn extract_text_and_images(pdf_path: String, images_folder_path: String) -> Vec<ExtractedPage> {
-  let pdfium_platform_library_path = if env::consts::OS == "macos" {
-    "./pdfium-mac-x64/lib"
+  let pdfium_platform_library_folder = if env::consts::OS == "macos" {
+    "pdfium-mac-x64/lib"
   } else {
-    "./pdfium-linux-x64/lib"
+    "pdfium-linux-x64/lib"
   };
+  let pdfium_platform_library_path = env::current_dir()
+    .unwrap()
+    .join(pdfium_platform_library_folder);
 
   // Init library once
   let pdfium = PDFIUM.get_or_init(|| {
-    let binary_path = Pdfium::pdfium_platform_library_name_at_path(pdfium_platform_library_path);
+    let binary_path = Pdfium::pdfium_platform_library_name_at_path(&pdfium_platform_library_path);
     let bindings = Pdfium::bind_to_library(binary_path).unwrap();
     // Bind library to pdfium binary
     let pdfium: Pdfium = Pdfium::new(bindings);
