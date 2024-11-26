@@ -6,10 +6,10 @@ use image::ImageFormat;
 use itertools::{Itertools, Position};
 use pdfium_render::prelude::*;
 use std::cmp::Ordering;
+use std::env;
 use std::fs::create_dir_all;
 use std::path::Path;
 use std::sync::OnceLock;
-use std::{env, os};
 
 static PDFIUM: OnceLock<Pdfium> = OnceLock::new();
 
