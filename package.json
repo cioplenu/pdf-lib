@@ -19,9 +19,6 @@
     "vitest": "2.1.5",
     "@types/node": "20"
   },
-  "engines": {
-    "node": ">= 20"
-  },
   "scripts": {
     "artifacts": "napi artifacts",
     "build": "napi build --platform --release",
