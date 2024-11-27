@@ -141,16 +141,23 @@ pub fn extract_text_and_images(
                 image_filename_idx += 1;
                 let img_path = images_folder_path.join(&image_filename);
 
-                image.save_with_format(img_path, ImageFormat::Png).unwrap();
+                let result = image.save_with_format(img_path, ImageFormat::Png);
 
-                // push text line if present
-                if !page_text_line.is_empty() {
-                  page_text_lines_and_images
-                    .push(TextLineOrImage::TextLine(page_text_line.clone()));
-                  page_text_line = "".to_owned();
-                }
+                match result {
+                  Ok(_) => {
+                    // push text line if present
+                    if !page_text_line.is_empty() {
+                      page_text_lines_and_images
+                        .push(TextLineOrImage::TextLine(page_text_line.clone()));
+                      page_text_line = "".to_owned();
+                    }
 
-                page_text_lines_and_images.push(TextLineOrImage::Image(image_filename.clone()));
+                    page_text_lines_and_images.push(TextLineOrImage::Image(image_filename.clone()));
+                  }
+                  Err(err) => {
+                    eprintln!("failed to save image - {}, {}", image_filename, err)
+                  }
+                };
               }
             }
           }
