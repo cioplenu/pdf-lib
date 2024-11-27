@@ -2,16 +2,17 @@
 
 #[macro_use]
 extern crate napi_derive;
+use anyhow::Result;
 use image::ImageFormat;
 use itertools::{Itertools, Position};
+use once_cell::sync::OnceCell;
 use pdfium_render::prelude::*;
 use std::cmp::Ordering;
 use std::env;
 use std::fs::create_dir_all;
 use std::path::Path;
-use std::sync::OnceLock;
 
-static PDFIUM: OnceLock<Pdfium> = OnceLock::new();
+static PDFIUM: OnceCell<Pdfium> = OnceCell::new();
 
 #[napi(object)]
 /// Extracted image metadata
@@ -42,10 +43,13 @@ static SAME_LINE_RANGE_DIFF: f32 = 5.0;
 
 #[napi]
 /// Extract text from pdf files in lines and images with related text
-pub fn extract_text_and_images(pdf_path: String, images_folder_path: String) -> Vec<ExtractedPage> {
+pub fn extract_text_and_images(
+  pdf_path: String,
+  images_folder_path: String,
+) -> Result<Vec<ExtractedPage>> {
   // Init library once
-  let pdfium = PDFIUM.get_or_init(|| {
-    let dir = env::current_dir().unwrap();
+  let pdfium = PDFIUM.get_or_try_init(|| -> Result<Pdfium> {
+    let dir = env::current_dir()?;
 
     let pdfium_platform_library_folder = if env::consts::OS == "macos" {
       "pdfium-mac-x64/lib"
@@ -61,19 +65,19 @@ pub fn extract_text_and_images(pdf_path: String, images_folder_path: String) -> 
     }
 
     let binary_path = Pdfium::pdfium_platform_library_name_at_path(&pdfium_platform_library_path);
-    let bindings = Pdfium::bind_to_library(binary_path).unwrap();
+    let bindings = Pdfium::bind_to_library(binary_path)?;
     // Bind library to pdfium binary
     let pdfium: Pdfium = Pdfium::new(bindings);
 
-    pdfium
-  });
+    Ok(pdfium)
+  })?;
 
   // Create images folder if not exist
   let images_folder_path = Path::new(&images_folder_path);
-  create_dir_all(images_folder_path).unwrap();
+  create_dir_all(images_folder_path)?;
   let mut image_filename_idx = 1;
 
-  let document: PdfDocument<'_> = pdfium.load_pdf_from_file(&pdf_path, None).unwrap();
+  let document: PdfDocument<'_> = pdfium.load_pdf_from_file(&pdf_path, None)?;
 
   let mut result: Vec<ExtractedPage> = vec![];
 
@@ -83,7 +87,7 @@ pub fn extract_text_and_images(pdf_path: String, images_folder_path: String) -> 
     // text related to the object. Therefore, when iterating over many text objects (as we
     // are doing here), it is slightly faster to load the text page once rather than loading
     // it and closing it every time we access an object:
-    let text_page = page.text().unwrap();
+    let text_page = page.text()?;
 
     let mut texts_and_images = page
       .objects()
@@ -242,5 +246,5 @@ pub fn extract_text_and_images(pdf_path: String, images_folder_path: String) -> 
     result.push(page_result);
   }
 
-  result
+  Ok(result)
 }
