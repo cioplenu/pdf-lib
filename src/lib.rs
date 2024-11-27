@@ -7,6 +7,7 @@ use image::ImageFormat;
 use itertools::{Itertools, Position};
 use once_cell::sync::OnceCell;
 use pdfium_render::prelude::*;
+use std::cmp::Ordering;
 use std::env;
 use std::fs::create_dir_all;
 use std::path::Path;
@@ -108,8 +109,15 @@ pub fn extract_text_and_images(
     // We sort in ascending numeric order, but because the PDF coordinate space
     // starts with the vertical 0 at the page bottom
     texts_and_images.sort_by(|a, b| {
-      let a_bounds = a.bounds().unwrap();
-      let b_bounds = b.bounds().unwrap();
+      let a_bounds = a.bounds();
+      let b_bounds = b.bounds();
+
+      if a_bounds.is_err() || b_bounds.is_err() {
+        return Ordering::Equal;
+      }
+
+      let a_bounds = a_bounds.unwrap();
+      let b_bounds = b_bounds.unwrap();
 
       if a_bounds.top == b_bounds.top
         || (a_bounds.top.value - b_bounds.top.value).abs() < SAME_LINE_RANGE_DIFF
@@ -132,6 +140,11 @@ pub fn extract_text_and_images(
       .iter()
       .with_position()
       .for_each(|(position, o)| {
+        let top_pos = match o.bounds() {
+          Ok(v) => v.top.value,
+          Err(_) => 0.0,
+        };
+
         match o.object_type() {
           // extract images with related text
           PdfPageObjectType::Image => {
@@ -163,24 +176,23 @@ pub fn extract_text_and_images(
           }
           // extract text in lines
           PdfPageObjectType::Text => {
-            let t = o.as_text_object().unwrap();
-
-            let top_pos = t.bounds().unwrap().top.value;
-
-            if last_top_pos == -1.0 {
-              page_text_line.push_str(&t.text().trim());
-            }
-            // text is on the same line with small vertical position misalignment
-            else if top_pos > last_top_pos - SAME_LINE_RANGE_DIFF {
-              page_text_line.push_str(" ");
-              page_text_line.push_str(&t.text().trim());
-            } else {
-              if !page_text_line.is_empty() {
-                page_text_lines_and_images.push(TextLineOrImage::TextLine(page_text_line.clone()));
-                page_text_line = "".to_owned();
+            if let Some(t) = o.as_text_object() {
+              if last_top_pos == -1.0 {
+                page_text_line.push_str(&t.text().trim());
               }
+              // text is on the same line with small vertical position misalignment
+              else if top_pos > last_top_pos - SAME_LINE_RANGE_DIFF {
+                page_text_line.push_str(" ");
+                page_text_line.push_str(&t.text().trim());
+              } else {
+                if !page_text_line.is_empty() {
+                  page_text_lines_and_images
+                    .push(TextLineOrImage::TextLine(page_text_line.clone()));
+                  page_text_line = "".to_owned();
+                }
 
-              page_text_line.push_str(&t.text().trim());
+                page_text_line.push_str(&t.text().trim());
+              }
             }
           }
           _ => {}
@@ -193,7 +205,7 @@ pub fn extract_text_and_images(
           }
         }
 
-        last_top_pos = o.bounds().unwrap().top.value;
+        last_top_pos = top_pos;
       });
 
     // map result
