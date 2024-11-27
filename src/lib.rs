@@ -7,7 +7,6 @@ use image::ImageFormat;
 use itertools::{Itertools, Position};
 use once_cell::sync::OnceCell;
 use pdfium_render::prelude::*;
-use std::cmp::Ordering;
 use std::env;
 use std::fs::create_dir_all;
 use std::path::Path;
@@ -108,7 +107,6 @@ pub fn extract_text_and_images(
     // Now sort by the vertical position of each bounds rectangle we collected.
     // We sort in ascending numeric order, but because the PDF coordinate space
     // starts with the vertical 0 at the page bottom
-    texts_and_images.sort_by(|a, b| a.bounds().unwrap().top.cmp(&b.bounds().unwrap().top));
     texts_and_images.sort_by(|a, b| {
       let a_bounds = a.bounds().unwrap();
       let b_bounds = b.bounds().unwrap();
@@ -119,7 +117,7 @@ pub fn extract_text_and_images(
         return b_bounds.left.cmp(&a_bounds.left);
       }
 
-      Ordering::Equal
+      a_bounds.top.cmp(&b_bounds.top)
     });
     texts_and_images.reverse();
 
