@@ -119,13 +119,26 @@ pub fn extract_text_and_images(
       let a_bounds = a_bounds.unwrap();
       let b_bounds = b_bounds.unwrap();
 
+      a_bounds.top.cmp(&b_bounds.top)
+    });
+    texts_and_images.sort_by(|a, b| {
+      let a_bounds = a.bounds();
+      let b_bounds = b.bounds();
+
+      if a_bounds.is_err() || b_bounds.is_err() {
+        return Ordering::Equal;
+      }
+
+      let a_bounds = a_bounds.unwrap();
+      let b_bounds = b_bounds.unwrap();
+
       if a_bounds.top == b_bounds.top
         || (a_bounds.top.value - b_bounds.top.value).abs() < SAME_LINE_RANGE_DIFF
       {
         return b_bounds.left.cmp(&a_bounds.left);
       }
 
-      a_bounds.top.cmp(&b_bounds.top)
+      Ordering::Equal
     });
     texts_and_images.reverse();
 
