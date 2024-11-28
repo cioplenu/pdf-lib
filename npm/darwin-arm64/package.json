@@ -1,0 +1,19 @@
+{
+  "name": "@operations1/pdf-lib-darwin-arm64",
+  "version": "0.0.7",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "main": "pdf-lib.darwin-arm64.node",
+  "files": [
+    "pdf-lib.darwin-arm64.node"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">= 10"
+  },
+  "repository": "https://github.com/cioplenu/pdf-lib.git"
+}
