@@ -52,7 +52,11 @@ pub fn extract_text_and_images(
     let dir = env::current_dir()?;
 
     let pdfium_platform_library_folder = if env::consts::OS == "macos" {
-      "pdfium-mac-x64/lib"
+      if env::consts::ARCH == "aarch64" {
+        "pdfium-mac-arm64/lib"
+      } else {
+        "pdfium-mac-x64/lib"
+      }
     } else {
       "pdfium-linux-x64/lib"
     };
