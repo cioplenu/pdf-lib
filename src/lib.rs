@@ -58,7 +58,11 @@ pub fn extract_text_and_images(
         "pdfium-mac-x64/lib"
       }
     } else {
-      "pdfium-linux-x64/lib"
+      if env::consts::ARCH == "aarch64" {
+        "pdfium-linux-arm64/lib"
+      } else {
+        "pdfium-linux-x64/lib"
+      }
     };
     let mut pdfium_platform_library_path = dir.join(pdfium_platform_library_folder);
 
