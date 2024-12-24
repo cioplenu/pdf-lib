@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, readFile, readFileSync } from "fs";
 
 describe("pdf export", async (t) => {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const pdfium_dirname = path.join(__dirname, "..");
   const pdfPath = path.join(__dirname, "./pdf-test-with-images.pdf");
 
   const imagesFolderPath = path.join(tmpdir(), randomUUID());
@@ -20,7 +21,7 @@ describe("pdf export", async (t) => {
   }
 
   it("should extract images and text from pdf", async () => {
-    const res = extractTextAndImages(pdfPath, imagesFolderPath);
+    const res = extractTextAndImages(pdfium_dirname, pdfPath, imagesFolderPath);
 
     // check text extraction
     expect(res).toStrictEqual([
@@ -96,7 +97,6 @@ describe("pdf export", async (t) => {
         ],
       },
     ]);
-
 
     // check image files extraction
     const image1hash = await calculateHashForBuffer(

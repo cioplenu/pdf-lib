@@ -10,7 +10,7 @@ use pdfium_render::prelude::*;
 use std::cmp::Ordering;
 use std::env;
 use std::fs::create_dir_all;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 static PDFIUM: OnceCell<Pdfium> = OnceCell::new();
 
@@ -44,12 +44,14 @@ static SAME_LINE_RANGE_DIFF: f32 = 5.0;
 #[napi]
 /// Extract text from pdf files in lines and images with related text
 pub fn extract_text_and_images(
+  // Path to pdfium library bindings
+  pdfium_dir: String,
   pdf_path: String,
   images_folder_path: String,
 ) -> Result<Vec<ExtractedPage>> {
   // Init library once
   let pdfium = PDFIUM.get_or_try_init(|| -> Result<Pdfium> {
-    let dir = env::current_dir()?;
+    let pdfium_dir = PathBuf::from(pdfium_dir);
 
     let pdfium_platform_library_folder = if env::consts::OS == "macos" {
       if env::consts::ARCH == "aarch64" {
@@ -64,13 +66,7 @@ pub fn extract_text_and_images(
         "pdfium-linux-x64/lib"
       }
     };
-    let mut pdfium_platform_library_path = dir.join(pdfium_platform_library_folder);
-
-    if !pdfium_platform_library_path.exists() {
-      pdfium_platform_library_path = dir
-        .join("node_modules/@operations1/pdf-lib")
-        .join(pdfium_platform_library_folder);
-    }
+    let pdfium_platform_library_path = pdfium_dir.join(pdfium_platform_library_folder);
 
     let binary_path = Pdfium::pdfium_platform_library_name_at_path(&pdfium_platform_library_path);
     let bindings = Pdfium::bind_to_library(binary_path)?;
