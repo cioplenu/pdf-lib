@@ -109,9 +109,7 @@ pub fn extract_text_and_images(
       })
       .collect::<Vec<_>>();
 
-    // Now sort by the vertical position of each bounds rectangle we collected.
-    // We sort in ascending numeric order, but because the PDF coordinate space
-    // starts with the vertical 0 at the page bottom
+    // Sort from top to bottom
     texts_and_images.sort_by(|a, b| {
       let a_bounds = a.bounds();
       let b_bounds = b.bounds();
@@ -123,28 +121,63 @@ pub fn extract_text_and_images(
       let a_bounds = a_bounds.unwrap();
       let b_bounds = b_bounds.unwrap();
 
-      a_bounds.top.cmp(&b_bounds.top)
+      b_bounds.top.cmp(&a_bounds.top)
     });
-    texts_and_images.sort_by(|a, b| {
-      let a_bounds = a.bounds();
-      let b_bounds = b.bounds();
 
-      if a_bounds.is_err() || b_bounds.is_err() {
-        return Ordering::Equal;
+    // Sort items on the same line or close from left to right
+    let mut groups: Vec<(f32, usize, usize)> = vec![]; // same line items line top/start/end
+
+    // Combine items on the same line in groups
+    for i in 0..texts_and_images.len() {
+      let current = texts_and_images.get(i);
+      if current.is_none() {
+        break;
       }
 
-      let a_bounds = a_bounds.unwrap();
-      let b_bounds = b_bounds.unwrap();
+      let current_bounds = current.unwrap().bounds();
+      if current_bounds.is_err() {
+        break;
+      }
+      let current_bounds = current_bounds.unwrap();
 
-      if a_bounds.top == b_bounds.top
-        || (a_bounds.top.value - b_bounds.top.value).abs() < SAME_LINE_RANGE_DIFF
-      {
-        return b_bounds.left.cmp(&a_bounds.left);
+      if groups.is_empty() {
+        let current_group: (f32, usize, usize) = (current_bounds.top.value, i, i);
+        groups.push(current_group);
+        continue;
       }
 
-      Ordering::Equal
-    });
-    texts_and_images.reverse();
+      let last_group = groups.last().unwrap();
+      let is_same_line = current_bounds.top.value == last_group.0
+        || (current_bounds.top.value - last_group.0).abs() < SAME_LINE_RANGE_DIFF;
+
+      if is_same_line {
+        let updated_last_group = (last_group.0, last_group.1, i);
+        groups.pop();
+        groups.push(updated_last_group);
+        continue;
+      } else {
+        let current_group: (f32, usize, usize) = (current_bounds.top.value, i, i);
+        groups.push(current_group);
+        continue;
+      }
+    }
+
+    // Sort groups from left to right
+    for item in groups {
+      texts_and_images[item.1..item.2 + 1].sort_by(|a, b| {
+        let a_bounds = a.bounds();
+        let b_bounds = b.bounds();
+
+        if a_bounds.is_err() || b_bounds.is_err() {
+          return Ordering::Equal;
+        }
+
+        let a_bounds = a_bounds.unwrap();
+        let b_bounds = b_bounds.unwrap();
+
+        a_bounds.left.cmp(&b_bounds.left)
+      });
+    }
 
     // sorted page text lines and images
     let mut page_text_lines_and_images: Vec<TextLineOrImage> = vec![];
