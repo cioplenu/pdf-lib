@@ -8,7 +8,7 @@ use once_cell::sync::OnceCell;
 use pdfium_render::prelude::*;
 use std::cmp::Ordering;
 use std::env;
-use std::fs::create_dir_all;
+use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
 
 static PDFIUM: OnceCell<Pdfium> = OnceCell::new();
@@ -82,8 +82,11 @@ pub async fn extract_text_and_images(
   create_dir_all(images_folder_path)?;
   let mut image_filename_idx = 1;
 
+  // Pdfium will only load the portions of the document it actually needs into memory. This is more efficient than loading the entire document into memory, especially when working with large documents, and allows for working with documents larger than the amount of available memory.
+  let reader =
+    File::open(pdf_path).map_err(|_| napi::Error::from_reason("Failed to open pdf document"))?;
   let document: PdfDocument<'_> = pdfium
-    .load_pdf_from_file(&pdf_path, None)
+    .load_pdf_from_reader(reader, None)
     .map_err(|_| napi::Error::from_reason("Failed to read pdf document"))?;
 
   let mut result: Vec<ExtractedPage> = vec![];
