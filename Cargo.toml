@@ -11,6 +11,7 @@ crate-type = ["cdylib"]
 napi = { version = "2.16.13", default-features = false, features = [
     "napi9",
     'error_anyhow',
+    'tokio_rt',
 ] }
 napi-derive = "2.16.12"
 pdfium-render = { version = "0.8.26", features = ['sync', 'thread_safe'] }
