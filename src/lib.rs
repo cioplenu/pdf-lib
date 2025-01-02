@@ -2,7 +2,6 @@
 
 #[macro_use]
 extern crate napi_derive;
-use anyhow::Result;
 use image::ImageFormat;
 use itertools::{Itertools, Position};
 use once_cell::sync::OnceCell;
@@ -48,9 +47,9 @@ pub fn extract_text_and_images(
   pdfium_dir: String,
   pdf_path: String,
   images_folder_path: String,
-) -> Result<Vec<ExtractedPage>> {
+) -> napi::anyhow::Result<Vec<ExtractedPage>> {
   // Init library once
-  let pdfium = PDFIUM.get_or_try_init(|| -> Result<Pdfium> {
+  let pdfium = PDFIUM.get_or_try_init(|| -> napi::anyhow::Result<Pdfium> {
     let pdfium_dir = PathBuf::from(pdfium_dir);
 
     let pdfium_platform_library_folder = if env::consts::OS == "macos" {
