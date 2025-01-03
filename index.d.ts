@@ -17,4 +17,4 @@ export interface ExtractedPage {
   pageTextLines: Array<string>
 }
 /** Extract text from pdf files in lines and images with related text */
-export declare function extractTextAndImages(pdfiumDir: string, pdfPath: string, imagesFolderPath: string): Array<ExtractedPage>
+export declare function extractTextAndImages(pdfiumDir: string, pdfPath: string, imagesFolderPath: string): Promise<Array<ExtractedPage>>

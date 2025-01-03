@@ -2,14 +2,13 @@
 
 #[macro_use]
 extern crate napi_derive;
-use anyhow::Result;
 use image::ImageFormat;
 use itertools::{Itertools, Position};
 use once_cell::sync::OnceCell;
 use pdfium_render::prelude::*;
 use std::cmp::Ordering;
 use std::env;
-use std::fs::create_dir_all;
+use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
 
 static PDFIUM: OnceCell<Pdfium> = OnceCell::new();
@@ -41,16 +40,16 @@ enum TextLineOrImage {
 // allowed vertical objects position difference to consider them same line
 static SAME_LINE_RANGE_DIFF: f32 = 5.0;
 
-#[napi]
+#[napi(catch_unwind)]
 /// Extract text from pdf files in lines and images with related text
-pub fn extract_text_and_images(
+pub async fn extract_text_and_images(
   // Path to pdfium library bindings
   pdfium_dir: String,
   pdf_path: String,
   images_folder_path: String,
-) -> Result<Vec<ExtractedPage>> {
+) -> napi::Result<Vec<ExtractedPage>> {
   // Init library once
-  let pdfium = PDFIUM.get_or_try_init(|| -> Result<Pdfium> {
+  let pdfium = PDFIUM.get_or_try_init(|| -> napi::Result<Pdfium> {
     let pdfium_dir = PathBuf::from(pdfium_dir);
 
     let pdfium_platform_library_folder = if env::consts::OS == "macos" {
@@ -69,7 +68,9 @@ pub fn extract_text_and_images(
     let pdfium_platform_library_path = pdfium_dir.join(pdfium_platform_library_folder);
 
     let binary_path = Pdfium::pdfium_platform_library_name_at_path(&pdfium_platform_library_path);
-    let bindings = Pdfium::bind_to_library(binary_path)?;
+    let bindings = Pdfium::bind_to_library(binary_path).map_err(|_| {
+      napi::Error::from_reason("Failed to bind to external Pdfium library bindings")
+    })?;
     // Bind library to pdfium binary
     let pdfium: Pdfium = Pdfium::new(bindings);
 
@@ -81,7 +82,12 @@ pub fn extract_text_and_images(
   create_dir_all(images_folder_path)?;
   let mut image_filename_idx = 1;
 
-  let document: PdfDocument<'_> = pdfium.load_pdf_from_file(&pdf_path, None)?;
+  // Pdfium will only load the portions of the document it actually needs into memory. This is more efficient than loading the entire document into memory, especially when working with large documents, and allows for working with documents larger than the amount of available memory.
+  let reader =
+    File::open(pdf_path).map_err(|_| napi::Error::from_reason("Failed to open pdf document"))?;
+  let document: PdfDocument<'_> = pdfium
+    .load_pdf_from_reader(reader, None)
+    .map_err(|_| napi::Error::from_reason("Failed to read pdf document"))?;
 
   let mut result: Vec<ExtractedPage> = vec![];
 
@@ -91,7 +97,9 @@ pub fn extract_text_and_images(
     // text related to the object. Therefore, when iterating over many text objects (as we
     // are doing here), it is slightly faster to load the text page once rather than loading
     // it and closing it every time we access an object:
-    let text_page = page.text()?;
+    let text_page: PdfPageText<'_> = page
+      .text()
+      .map_err(|_| napi::Error::from_reason("Failed to read pdf document page"))?;
 
     let mut texts_and_images = page
       .objects()

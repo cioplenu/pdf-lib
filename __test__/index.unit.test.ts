@@ -21,7 +21,11 @@ describe("pdf export", async (t) => {
   }
 
   it("should extract images and text from pdf", async () => {
-    const res = extractTextAndImages(pdfium_dirname, pdfPath, imagesFolderPath);
+    const res = await extractTextAndImages(
+      pdfium_dirname,
+      pdfPath,
+      imagesFolderPath
+    );
 
     // check text extraction
     expect(res).toStrictEqual([
