@@ -40,7 +40,7 @@ enum TextLineOrImage {
 // allowed vertical objects position difference to consider them same line
 static SAME_LINE_RANGE_DIFF: f32 = 5.0;
 
-#[napi]
+#[napi(catch_unwind)]
 /// Extract text from pdf files in lines and images with related text
 pub async fn extract_text_and_images(
   // Path to pdfium library bindings
