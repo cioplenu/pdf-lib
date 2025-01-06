@@ -34,6 +34,7 @@ describe("pdf export", async (t) => {
           {
             filename: "image-1.png",
             relatedText: ["1. How to program", "AA-FFF222 - AY"],
+            fileSizeBytes: 43119,
           },
         ],
         pageTextLines: ["1. How to program", "AA-FFF222 - AY", "TSCode V1.2"],
@@ -61,6 +62,7 @@ describe("pdf export", async (t) => {
               "See animal below.",
               "is a treatise on the theory of ethics, very popular during the Renaissance.",
             ],
+            fileSizeBytes: 260899,
           },
         ],
         pageTextLines: [
@@ -87,10 +89,12 @@ describe("pdf export", async (t) => {
           {
             filename: "image-3.png",
             relatedText: ["Probably this is electricity:", "What is it?"],
+            fileSizeBytes: 92681,
           },
           {
             filename: "image-4.png",
             relatedText: ["Here is a key", "Some text here and there"],
+            fileSizeBytes: 368679,
           },
         ],
         pageTextLines: [

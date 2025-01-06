@@ -7,6 +7,7 @@
 export interface ExtractedImageMeta {
   /** Image filename */
   filename: string
+  fileSizeBytes: number
   /** Two closest to image text lines above or below */
   relatedText: Array<string>
 }
