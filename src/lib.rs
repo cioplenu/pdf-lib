@@ -18,6 +18,7 @@ static PDFIUM: OnceCell<Pdfium> = OnceCell::new();
 pub struct ExtractedImageMeta {
   /// Image filename
   pub filename: String,
+  pub file_size_bytes: u32,
   /// Two closest to image text lines above or below
   pub related_text: Vec<String>,
 }
@@ -304,9 +305,16 @@ pub async fn extract_text_and_images(
             related_text = previous_two_text_lines;
           }
 
+          let file_path = images_folder_path.join(&filename);
+          let mut file_size_bytes: u32 = 0;
+          if let Ok(x) = std::fs::metadata(file_path) {
+            file_size_bytes = x.len() as u32;
+          };
+
           let meta = ExtractedImageMeta {
             filename: filename.clone(),
             related_text,
+            file_size_bytes,
           };
           page_images.push(meta)
         }
