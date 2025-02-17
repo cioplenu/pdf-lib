@@ -71,7 +71,14 @@ pub async fn extract_text_and_images(
 
     let binary_path = Pdfium::pdfium_platform_library_name_at_path(&pdfium_platform_library_path);
     let bindings = Pdfium::bind_to_library(binary_path).map_err(|_| {
-      napi::Error::from_reason("Failed to bind to external Pdfium library bindings")
+      napi::Error::from_reason(format!(
+        "Failed to bind to external Pdfium library bindings. ARCH: {}, OS: {}, folder: {}, pdfium_dir: {:?}, binary_path: {:?}",
+        env::consts::ARCH,
+        env::consts::OS,
+        pdfium_platform_library_folder,
+        pdfium_dir,
+        binary_path
+      ))
     })?;
     // Bind library to pdfium binary
     let pdfium: Pdfium = Pdfium::new(bindings);
