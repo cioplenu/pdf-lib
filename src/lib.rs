@@ -32,6 +32,7 @@ pub struct ExtractedPage {
 }
 
 // top y position and item
+#[derive(Clone)]
 enum TextLineOrImage {
   TextLine(String),
   /// image filename
@@ -270,7 +271,27 @@ pub async fn extract_text_and_images(
     // map result
     let mut page_text_lines: Vec<String> = vec![];
     let mut page_images: Vec<ExtractedImageMeta> = vec![];
+
+    // map text lines
     page_text_lines_and_images
+      .iter()
+      .for_each(|item| match item {
+        TextLineOrImage::TextLine(text) => page_text_lines.push(text.clone()),
+        _ => {}
+      });
+
+    // map images
+    // remove artifacts and small text lines which will be hard to relate to image
+    let page_text_lines_filtered_and_images: Vec<TextLineOrImage> = page_text_lines_and_images
+      .iter()
+      .cloned()
+      .filter(|item| match item {
+        TextLineOrImage::TextLine(v) => v.chars().count() >= 2,
+        _ => true,
+      })
+      .collect();
+
+    page_text_lines_filtered_and_images
       .iter()
       .enumerate()
       .with_position()
@@ -279,7 +300,7 @@ pub async fn extract_text_and_images(
           let related_text: Vec<String>;
 
           if position == Position::First {
-            let next_two_text_lines: Vec<String> = page_text_lines_and_images
+            let next_two_text_lines: Vec<String> = page_text_lines_filtered_and_images
               .iter()
               .skip(idx)
               .filter_map(|item| match item {
@@ -291,7 +312,7 @@ pub async fn extract_text_and_images(
 
             related_text = next_two_text_lines;
           } else {
-            let mut previous_two_text_lines: Vec<String> = page_text_lines_and_images
+            let mut previous_two_text_lines: Vec<String> = page_text_lines_filtered_and_images
               .iter()
               .skip(idx - 2)
               .filter_map(|item| match item {
@@ -316,9 +337,9 @@ pub async fn extract_text_and_images(
             related_text,
             file_size_bytes,
           };
-          page_images.push(meta)
+          page_images.push(meta);
         }
-        TextLineOrImage::TextLine(text) => page_text_lines.push(text.clone()),
+        _ => {}
       });
 
     let page_result = ExtractedPage {
