@@ -1,16 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { extractTextAndImages } from "../index.js";
 import path from "path";
-import { fileURLToPath } from "url";
 import fs from "node:fs/promises";
 import { tmpdir } from "os";
 import { randomUUID, createHash } from "crypto";
-import { existsSync, mkdirSync, readFile, readFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync } from "fs";
 
 describe("pdf export", async (t) => {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const pdfium_dirname = path.join(__dirname, "..");
-  const pdfPath = path.join(__dirname, "./pdf-test-with-images.pdf");
+  const pdfium_dirname = path.join(import.meta.dirname, "..");
+  const pdfPath = path.join(import.meta.dirname, "./pdf-test-with-images.pdf");
 
   const imagesFolderPath = path.join(tmpdir(), randomUUID());
   if (!existsSync(imagesFolderPath)) {
