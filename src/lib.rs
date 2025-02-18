@@ -32,6 +32,7 @@ pub struct ExtractedPage {
 }
 
 // top y position and item
+#[derive(Clone)]
 enum TextLineOrImage {
   TextLine(String),
   /// image filename
@@ -69,8 +70,15 @@ pub async fn extract_text_and_images(
     let pdfium_platform_library_path = pdfium_dir.join(pdfium_platform_library_folder);
 
     let binary_path = Pdfium::pdfium_platform_library_name_at_path(&pdfium_platform_library_path);
-    let bindings = Pdfium::bind_to_library(binary_path).map_err(|_| {
-      napi::Error::from_reason("Failed to bind to external Pdfium library bindings")
+    let bindings = Pdfium::bind_to_library(binary_path.clone()).map_err(|err| {
+      eprintln!("{}", err);
+      napi::Error::from_reason(format!(
+        "Failed to bind to external Pdfium library bindings. ARCH: {}, OS: {}, binary_path: {:?}, path exists: {}",
+        env::consts::ARCH,
+        env::consts::OS,
+        binary_path.clone(),
+        binary_path.exists(),
+      ))
     })?;
     // Bind library to pdfium binary
     let pdfium: Pdfium = Pdfium::new(bindings);
@@ -130,7 +138,7 @@ pub async fn extract_text_and_images(
       let a_bounds = a_bounds.unwrap();
       let b_bounds = b_bounds.unwrap();
 
-      b_bounds.top.cmp(&a_bounds.top)
+      b_bounds.top().cmp(&a_bounds.top())
     });
 
     // Sort items on the same line or close from left to right
@@ -150,14 +158,14 @@ pub async fn extract_text_and_images(
       let current_bounds = current_bounds.unwrap();
 
       if groups.is_empty() {
-        let current_group: (f32, usize, usize) = (current_bounds.top.value, i, i);
+        let current_group: (f32, usize, usize) = (current_bounds.top().value, i, i);
         groups.push(current_group);
         continue;
       }
 
       let last_group = groups.last().unwrap();
-      let is_same_line = current_bounds.top.value == last_group.0
-        || (current_bounds.top.value - last_group.0).abs() < SAME_LINE_RANGE_DIFF;
+      let is_same_line = current_bounds.top().value == last_group.0
+        || (current_bounds.top().value - last_group.0).abs() < SAME_LINE_RANGE_DIFF;
 
       if is_same_line {
         let updated_last_group = (last_group.0, last_group.1, i);
@@ -165,7 +173,7 @@ pub async fn extract_text_and_images(
         groups.push(updated_last_group);
         continue;
       } else {
-        let current_group: (f32, usize, usize) = (current_bounds.top.value, i, i);
+        let current_group: (f32, usize, usize) = (current_bounds.top().value, i, i);
         groups.push(current_group);
         continue;
       }
@@ -184,7 +192,7 @@ pub async fn extract_text_and_images(
         let a_bounds = a_bounds.unwrap();
         let b_bounds = b_bounds.unwrap();
 
-        a_bounds.left.cmp(&b_bounds.left)
+        a_bounds.left().cmp(&b_bounds.left())
       });
     }
 
@@ -200,7 +208,7 @@ pub async fn extract_text_and_images(
       .with_position()
       .for_each(|(position, o)| {
         let top_pos = match o.bounds() {
-          Ok(v) => v.top.value,
+          Ok(v) => v.top().value,
           Err(_) => 0.0,
         };
 
@@ -270,7 +278,27 @@ pub async fn extract_text_and_images(
     // map result
     let mut page_text_lines: Vec<String> = vec![];
     let mut page_images: Vec<ExtractedImageMeta> = vec![];
+
+    // map text lines
     page_text_lines_and_images
+      .iter()
+      .for_each(|item| match item {
+        TextLineOrImage::TextLine(text) => page_text_lines.push(text.clone()),
+        _ => {}
+      });
+
+    // map images
+    // remove artifacts and small text lines which will be hard to relate to image
+    let page_text_lines_filtered_and_images: Vec<TextLineOrImage> = page_text_lines_and_images
+      .iter()
+      .cloned()
+      .filter(|item| match item {
+        TextLineOrImage::TextLine(v) => v.chars().count() >= 2,
+        _ => true,
+      })
+      .collect();
+
+    page_text_lines_filtered_and_images
       .iter()
       .enumerate()
       .with_position()
@@ -279,7 +307,7 @@ pub async fn extract_text_and_images(
           let related_text: Vec<String>;
 
           if position == Position::First {
-            let next_two_text_lines: Vec<String> = page_text_lines_and_images
+            let next_two_text_lines: Vec<String> = page_text_lines_filtered_and_images
               .iter()
               .skip(idx)
               .filter_map(|item| match item {
@@ -291,7 +319,7 @@ pub async fn extract_text_and_images(
 
             related_text = next_two_text_lines;
           } else {
-            let mut previous_two_text_lines: Vec<String> = page_text_lines_and_images
+            let mut previous_two_text_lines: Vec<String> = page_text_lines_filtered_and_images
               .iter()
               .skip(idx - 2)
               .filter_map(|item| match item {
@@ -316,9 +344,9 @@ pub async fn extract_text_and_images(
             related_text,
             file_size_bytes,
           };
-          page_images.push(meta)
+          page_images.push(meta);
         }
-        TextLineOrImage::TextLine(text) => page_text_lines.push(text.clone()),
+        _ => {}
       });
 
     let page_result = ExtractedPage {
