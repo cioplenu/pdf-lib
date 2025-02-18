@@ -138,7 +138,7 @@ pub async fn extract_text_and_images(
       let a_bounds = a_bounds.unwrap();
       let b_bounds = b_bounds.unwrap();
 
-      b_bounds.top.cmp(&a_bounds.top)
+      b_bounds.top().cmp(&a_bounds.top())
     });
 
     // Sort items on the same line or close from left to right
@@ -158,14 +158,14 @@ pub async fn extract_text_and_images(
       let current_bounds = current_bounds.unwrap();
 
       if groups.is_empty() {
-        let current_group: (f32, usize, usize) = (current_bounds.top.value, i, i);
+        let current_group: (f32, usize, usize) = (current_bounds.top().value, i, i);
         groups.push(current_group);
         continue;
       }
 
       let last_group = groups.last().unwrap();
-      let is_same_line = current_bounds.top.value == last_group.0
-        || (current_bounds.top.value - last_group.0).abs() < SAME_LINE_RANGE_DIFF;
+      let is_same_line = current_bounds.top().value == last_group.0
+        || (current_bounds.top().value - last_group.0).abs() < SAME_LINE_RANGE_DIFF;
 
       if is_same_line {
         let updated_last_group = (last_group.0, last_group.1, i);
@@ -173,7 +173,7 @@ pub async fn extract_text_and_images(
         groups.push(updated_last_group);
         continue;
       } else {
-        let current_group: (f32, usize, usize) = (current_bounds.top.value, i, i);
+        let current_group: (f32, usize, usize) = (current_bounds.top().value, i, i);
         groups.push(current_group);
         continue;
       }
@@ -192,7 +192,7 @@ pub async fn extract_text_and_images(
         let a_bounds = a_bounds.unwrap();
         let b_bounds = b_bounds.unwrap();
 
-        a_bounds.left.cmp(&b_bounds.left)
+        a_bounds.left().cmp(&b_bounds.left())
       });
     }
 
@@ -208,7 +208,7 @@ pub async fn extract_text_and_images(
       .with_position()
       .for_each(|(position, o)| {
         let top_pos = match o.bounds() {
-          Ok(v) => v.top.value,
+          Ok(v) => v.top().value,
           Err(_) => 0.0,
         };
 

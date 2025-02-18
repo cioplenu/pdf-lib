@@ -14,7 +14,7 @@ napi = { version = "2.16.13", default-features = false, features = [
     'tokio_rt',
 ] }
 napi-derive = "2.16.13"
-pdfium-render = { version = "0.8.27", features = ['sync', 'thread_safe'] }
+pdfium-render = { version = "0.8.28", features = ['sync', 'thread_safe'] }
 image = { version = "0.25.5" }
 itertools = { version = "0.14.0" }
 once_cell = { version = "1.20.2" }
