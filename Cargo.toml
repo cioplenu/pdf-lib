@@ -8,19 +8,19 @@ crate-type = ["cdylib"]
 
 [dependencies]
 # Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
-napi = { version = "2.16.16", default-features = false, features = [
+napi = { version = "2.12.2", default-features = false, features = [
     "napi9",
     'error_anyhow',
     'tokio_rt',
 ] }
-napi-derive = "2.16.13"
+napi-derive = "2.12.2"
 pdfium-render = { version = "0.8.28", features = ['sync', 'thread_safe'] }
 image = { version = "0.25.5" }
 itertools = { version = "0.14.0" }
 once_cell = { version = "1.20.2" }
 
 [build-dependencies]
-napi-build = "2.1.4"
+napi-build = "2.0.1"
 
 [profile.release]
 lto = true
