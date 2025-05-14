@@ -51,40 +51,7 @@ pub async fn extract_text_and_images(
   images_folder_path: String,
 ) -> napi::Result<Vec<ExtractedPage>> {
   // Init library once
-  let pdfium = PDFIUM.get_or_try_init(|| -> napi::Result<Pdfium> {
-    let pdfium_dir = PathBuf::from(pdfium_dir);
-
-    let pdfium_platform_library_folder = if env::consts::OS == "macos" {
-      if env::consts::ARCH == "aarch64" {
-        "pdfium-mac-arm64/lib"
-      } else {
-        "pdfium-mac-x64/lib"
-      }
-    } else {
-      if env::consts::ARCH == "aarch64" {
-        "pdfium-linux-arm64/lib"
-      } else {
-        "pdfium-linux-x64/lib"
-      }
-    };
-    let pdfium_platform_library_path = pdfium_dir.join(pdfium_platform_library_folder);
-
-    let binary_path = Pdfium::pdfium_platform_library_name_at_path(&pdfium_platform_library_path);
-    let bindings = Pdfium::bind_to_library(binary_path.clone()).map_err(|err| {
-      eprintln!("{}", err);
-      napi::Error::from_reason(format!(
-        "Failed to bind to external Pdfium library bindings. ARCH: {}, OS: {}, binary_path: {:?}, path exists: {}",
-        env::consts::ARCH,
-        env::consts::OS,
-        binary_path.clone(),
-        binary_path.exists(),
-      ))
-    })?;
-    // Bind library to pdfium binary
-    let pdfium: Pdfium = Pdfium::new(bindings);
-
-    Ok(pdfium)
-  })?;
+  let pdfium = init_pdfium(pdfium_dir)?;
 
   // Create images folder if not exist
   let images_folder_path = Path::new(&images_folder_path);
@@ -368,40 +335,7 @@ pub async fn extract_text(
   pdf_path: String,
 ) -> napi::Result<Vec<String>> {
   // Init library once
-  let pdfium = PDFIUM.get_or_try_init(|| -> napi::Result<Pdfium> {
-    let pdfium_dir = PathBuf::from(pdfium_dir);
-
-    let pdfium_platform_library_folder = if env::consts::OS == "macos" {
-      if env::consts::ARCH == "aarch64" {
-        "pdfium-mac-arm64/lib"
-      } else {
-        "pdfium-mac-x64/lib"
-      }
-    } else {
-      if env::consts::ARCH == "aarch64" {
-        "pdfium-linux-arm64/lib"
-      } else {
-        "pdfium-linux-x64/lib"
-      }
-    };
-    let pdfium_platform_library_path = pdfium_dir.join(pdfium_platform_library_folder);
-
-    let binary_path = Pdfium::pdfium_platform_library_name_at_path(&pdfium_platform_library_path);
-    let bindings = Pdfium::bind_to_library(binary_path.clone()).map_err(|err| {
-      eprintln!("{}", err);
-      napi::Error::from_reason(format!(
-        "Failed to bind to external Pdfium library bindings. ARCH: {}, OS: {}, binary_path: {:?}, path exists: {}",
-        env::consts::ARCH,
-        env::consts::OS,
-        binary_path.clone(),
-        binary_path.exists(),
-      ))
-    })?;
-    // Bind library to pdfium binary
-    let pdfium: Pdfium = Pdfium::new(bindings);
-
-    Ok(pdfium)
-  })?;
+  let pdfium = init_pdfium(pdfium_dir)?;
 
   // Pdfium will only load the portions of the document it actually needs into memory. This is more efficient than loading the entire document into memory, especially when working with large documents, and allows for working with documents larger than the amount of available memory.
   let reader =
@@ -417,21 +351,57 @@ pub async fn extract_text(
       .text()
       .map_err(|_| napi::Error::from_reason("Failed to read pdf document page"))?;
 
-      let texts = page.objects()
+    let texts = page
+      .objects()
       .iter()
       .filter_map(|o| {
-              o.as_text_object()
-              .map(|text| text_page.for_object(text).trim().to_string())
+        o.as_text_object()
+          .map(|text| text_page.for_object(text).trim().to_string())
       })
       .collect::<Vec<String>>();
-      
-      let combined_text = texts.join("");
-      
-      if !combined_text.trim().is_empty() {
-          result.push(combined_text);
-      }
 
+    let combined_text = texts.join("");
+
+    if !combined_text.trim().is_empty() {
+      result.push(combined_text);
     }
+  }
 
   Ok(result)
+}
+
+fn init_pdfium<'a>(pdfium_dir: String) -> napi::Result<&'a Pdfium> {
+  let pdfium=PDFIUM.get_or_try_init(|| -> napi::Result<Pdfium> {
+      let pdfium_dir = PathBuf::from(pdfium_dir);
+      let pdfium_platform_library_folder = if env::consts::OS == "macos" {
+        if env::consts::ARCH == "aarch64" {
+          "pdfium-mac-arm64/lib"
+        } else {
+          "pdfium-mac-x64/lib"
+        }
+      } else {
+        if env::consts::ARCH == "aarch64" {
+          "pdfium-linux-arm64/lib"
+        } else {
+          "pdfium-linux-x64/lib"
+        }
+      };
+      let pdfium_platform_library_path = pdfium_dir.join(pdfium_platform_library_folder);
+      let binary_path = Pdfium::pdfium_platform_library_name_at_path(&pdfium_platform_library_path);
+      let bindings = Pdfium::bind_to_library(binary_path.clone()).map_err(|err| {
+        eprintln!("{}", err);
+        napi::Error::from_reason(format!(
+          "Failed to bind to external Pdfium library bindings. ARCH: {}, OS: {}, binary_path: {:?}, path exists: {}",
+          env::consts::ARCH,
+          env::consts::OS,
+          binary_path.clone(),
+          binary_path.exists(),
+        ))
+      })?;
+      // Bind library to pdfium binary
+      let pdfium: Pdfium = Pdfium::new(bindings);
+      Ok(pdfium)
+    })?;
+
+  return Ok(pdfium);
 }
