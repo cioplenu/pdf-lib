@@ -8,7 +8,7 @@ import { existsSync, mkdirSync, readFileSync } from "fs";
 
 const pdfium_dirname = path.join(import.meta.dirname, "..");
 const pdfPath = path.join(import.meta.dirname, "./pdf-test-with-images.pdf");
-const pdfPath2 = path.join(import.meta.dirname, "./pdf-test-with-out-images.pdf");
+const pdfPath2 = path.join(import.meta.dirname, "./pdf-test-without-images.pdf");
 
 const imagesFolderPath = path.join(tmpdir(), randomUUID());
 if (!existsSync(imagesFolderPath)) {
