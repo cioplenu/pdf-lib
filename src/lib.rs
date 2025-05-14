@@ -359,3 +359,79 @@ pub async fn extract_text_and_images(
 
   Ok(result)
 }
+
+#[napi(catch_unwind)]
+/// Extract text from pdf files in lines
+pub async fn extract_text(
+  // Path to pdfium library bindings
+  pdfium_dir: String,
+  pdf_path: String,
+) -> napi::Result<Vec<String>> {
+  // Init library once
+  let pdfium = PDFIUM.get_or_try_init(|| -> napi::Result<Pdfium> {
+    let pdfium_dir = PathBuf::from(pdfium_dir);
+
+    let pdfium_platform_library_folder = if env::consts::OS == "macos" {
+      if env::consts::ARCH == "aarch64" {
+        "pdfium-mac-arm64/lib"
+      } else {
+        "pdfium-mac-x64/lib"
+      }
+    } else {
+      if env::consts::ARCH == "aarch64" {
+        "pdfium-linux-arm64/lib"
+      } else {
+        "pdfium-linux-x64/lib"
+      }
+    };
+    let pdfium_platform_library_path = pdfium_dir.join(pdfium_platform_library_folder);
+
+    let binary_path = Pdfium::pdfium_platform_library_name_at_path(&pdfium_platform_library_path);
+    let bindings = Pdfium::bind_to_library(binary_path.clone()).map_err(|err| {
+      eprintln!("{}", err);
+      napi::Error::from_reason(format!(
+        "Failed to bind to external Pdfium library bindings. ARCH: {}, OS: {}, binary_path: {:?}, path exists: {}",
+        env::consts::ARCH,
+        env::consts::OS,
+        binary_path.clone(),
+        binary_path.exists(),
+      ))
+    })?;
+    // Bind library to pdfium binary
+    let pdfium: Pdfium = Pdfium::new(bindings);
+
+    Ok(pdfium)
+  })?;
+
+  // Pdfium will only load the portions of the document it actually needs into memory. This is more efficient than loading the entire document into memory, especially when working with large documents, and allows for working with documents larger than the amount of available memory.
+  let reader =
+    File::open(pdf_path).map_err(|_| napi::Error::from_reason("Failed to open pdf document"))?;
+  let document: PdfDocument<'_> = pdfium
+    .load_pdf_from_reader(reader, None)
+    .map_err(|_| napi::Error::from_reason("Failed to read pdf document"))?;
+
+  let mut result: Vec<String> = vec![];
+
+  for page in document.pages().iter() {
+    let text_page: PdfPageText<'_> = page
+      .text()
+      .map_err(|_| napi::Error::from_reason("Failed to read pdf document page"))?;
+
+      let texts = page.objects()
+      .iter()
+      .filter_map(|o| {
+              o.as_text_object()
+              .map(|text| text_page.for_object(text).trim().to_string())
+      })
+      .collect::<Vec<String>>();
+      
+      let combined_text = texts.join("");
+      
+      if !combined_text.trim().is_empty() {
+          result.push(combined_text);
+      }
+
+    }
+
+  Ok(result)
+}
