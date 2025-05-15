@@ -6,11 +6,13 @@ use image::ImageFormat;
 use itertools::{Itertools, Position};
 use once_cell::sync::OnceCell;
 use pdfium_render::prelude::*;
-use std::cmp::Ordering;
-use std::env;
+use std::time::Duration;
+use std::{env, thread};
 use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 
+static INITIALIZATION: AtomicBool = AtomicBool::new(false);
 static PDFIUM: OnceCell<Pdfium> = OnceCell::new();
 
 #[napi(object)]
@@ -51,7 +53,7 @@ pub async fn extract_text_and_images(
   images_folder_path: String,
 ) -> napi::Result<Vec<ExtractedPage>> {
   // Init library once
-  let pdfium = init_pdfium(pdfium_dir)?;
+  let pdfium = init_pdfium(pdfium_dir).await?;
 
   // Create images folder if not exist
   let images_folder_path = Path::new(&images_folder_path);
@@ -99,7 +101,7 @@ pub async fn extract_text_and_images(
       let b_bounds = b.bounds();
 
       if a_bounds.is_err() || b_bounds.is_err() {
-        return Ordering::Equal;
+        return std::cmp::Ordering::Equal;
       }
 
       let a_bounds = a_bounds.unwrap();
@@ -153,7 +155,7 @@ pub async fn extract_text_and_images(
         let b_bounds = b.bounds();
 
         if a_bounds.is_err() || b_bounds.is_err() {
-          return Ordering::Equal;
+          return std::cmp::Ordering::Equal;
         }
 
         let a_bounds = a_bounds.unwrap();
@@ -335,7 +337,7 @@ pub async fn extract_text(
   pdf_path: String,
 ) -> napi::Result<Vec<String>> {
   // Init library once
-  let pdfium = init_pdfium(pdfium_dir)?;
+  let pdfium = init_pdfium(pdfium_dir).await?;
 
   // Pdfium will only load the portions of the document it actually needs into memory. This is more efficient than loading the entire document into memory, especially when working with large documents, and allows for working with documents larger than the amount of available memory.
   let reader =
@@ -370,7 +372,18 @@ pub async fn extract_text(
   Ok(result)
 }
 
-fn init_pdfium<'a>(pdfium_dir: String) -> napi::Result<&'a Pdfium> {
+async fn init_pdfium<'a>(pdfium_dir: String) -> napi::Result<&'a Pdfium> {
+  // ensure that we initialize only once
+  if INITIALIZATION.load(Ordering::SeqCst) == true {
+    thread::sleep(Duration::from_secs(2));
+    
+    return PDFIUM
+      .get()
+      .ok_or(napi::Error::from_reason("Failed to get pdfium instance"));
+  }
+
+  INITIALIZATION.store(true, Ordering::SeqCst);
+
   let pdfium=PDFIUM.get_or_try_init(|| -> napi::Result<Pdfium> {
       let pdfium_dir = PathBuf::from(pdfium_dir);
       let pdfium_platform_library_folder = if env::consts::OS == "macos" {
