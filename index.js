@@ -310,6 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { extractTextAndImages } = nativeBinding
+const { extractTextAndImages, extractText } = nativeBinding
 
 module.exports.extractTextAndImages = extractTextAndImages
+module.exports.extractText = extractText

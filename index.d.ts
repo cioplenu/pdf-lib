@@ -19,3 +19,5 @@ export interface ExtractedPage {
 }
 /** Extract text from pdf files in lines and images with related text */
 export declare function extractTextAndImages(pdfiumDir: string, pdfPath: string, imagesFolderPath: string): Promise<Array<ExtractedPage>>
+/** Extract text from pdf files in lines */
+export declare function extractText(pdfiumDir: string, pdfPath: string): Promise<Array<string>>
