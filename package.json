@@ -18,18 +18,14 @@
   "license": "MIT",
   "devDependencies": {
     "@napi-rs/cli": "2.18.4",
-    "ava": "6.2.0",
     "@types/node": "20"
-  },
-  "ava": {
-    "timeout": "3m"
   },
   "scripts": {
     "artifacts": "napi artifacts",
     "build": "napi build --platform --release",
     "build:debug": "napi build --platform",
     "prepublishOnly": "napi prepublish -t npm",
-    "test": "ava",
+    "test": "node --test ./__test__/index.spec.mjs",
     "universal": "napi universal",
     "version": "napi version"
   },
